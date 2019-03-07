@@ -160,7 +160,7 @@ def get_package_info(package, version=None, packages=None):
         else:
             url = "https://pypi.org/pypi/{}/json".format(package)
 
-        response = urllib.request.urlopen(url).read()
+        response = urllib.request.urlopen(url).read().decode(encoding='UTF-8')
         info = json.loads(response)
 
         name = package
@@ -204,8 +204,8 @@ def get_package_info(package, version=None, packages=None):
         for dependency in dependencies:
             get_package_info(dependency[0], version=dependency[1], packages=packages)
 
-    except:
-        print("  Failed to gather {}".format(package))
+    except Exception as e:
+        print("  Failed to gather {} ({})".format(package, str(e)))
 
     return packages[0]
 
