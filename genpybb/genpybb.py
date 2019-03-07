@@ -19,11 +19,11 @@ SUMMARY = "{summary}"
 HOMEPAGE = "{homepage}"
 AUTHOR = "{author} <{author_email}>"
 LICENSE = "{license}"
-LIC_FILES_CHKSUM = "file://{license_file};md5={license_md5sum}"
+LIC_FILES_CHKSUM = "file://{license_file};md5={license_md5}"
 
 SRC_URI = "{src_uri}"
-SRC_URI[md5sum] = "{md5sum}"
-SRC_URI[sha256sum] = "{sha256sum}"
+SRC_URI[md5sum] = "{md5}"
+SRC_URI[sha256sum] = "{sha256}"
 
 S = "${{WORKDIR}}/{src_dir}"
 
@@ -43,17 +43,19 @@ Package = namedtuple(
         "author_email",
         "license",
         "license_file",
-        "license_md5sum",
+        "license_md5",
         "src_dir",
         "src_uri",
-        "src_md5sum",
-        "src_sha256sum",
+        "src_md5",
+        "src_sha256",
         "dependencies",
     ],
 )
 
+Dependency = namedtuple("Dependency", ["name", "version", "extra"])
 
-def compute_md5(path):
+
+def md5sum(path):
     with open(path, mode="rb") as f:
         d = hashlib.md5()
         for buf in iter(partial(f.read, 128), b""):
@@ -61,7 +63,7 @@ def compute_md5(path):
     return d.hexdigest()
 
 
-def compute_sha256(path):
+def sha256sum(path):
     with open(path, mode="rb") as f:
         d = hashlib.sha256()
         for buf in iter(partial(f.read, 128), b""):
@@ -114,15 +116,9 @@ def get_package_file_info(package, version, uri):
         license_file = "setup.py"
 
     license_path = os.path.join(tmpdir, src_dir, license_file)
-    license_md5sum = compute_md5(license_path)
+    license_md5 = md5sum(license_path)
 
-    return (
-        compute_md5(output),
-        compute_sha256(output),
-        src_dir,
-        license_file,
-        license_md5sum,
-    )
+    return (md5sum(output), sha256sum(output), src_dir, license_file, license_md5)
 
 
 def get_package_dependencies(info):
@@ -130,29 +126,40 @@ def get_package_dependencies(info):
 
     requires_dist = info["info"]["requires_dist"]
 
+    def parse_version(dep):
+        version = None
+        version_search = re.findall("\((>=|==|<=)(.+)\)", dep)
+        if version_search:
+            version = version_search[0][1]
+        return version
+
     if requires_dist:
         for dep in requires_dist:
             if "extra ==" in dep:
-                continue
+                extra_search = re.findall("extra == '(.*)'", dep.split(";")[1])
+                if extra_search:
+                    extra = extra_search[0]
+                    package_part = dep.split(";")[0]
+                    package = package_part.split(" ")[0]
+                    version = parse_version(package_part)
+                    dep = Dependency(package, version, extra)
+                    deps.append(dep)
+            else:
+                package = dep.split(" ")[0]
+                version = parse_version(dep)
 
-            version_search = re.findall("\((>=|==|<=)(.+)\)", dep)
-            package = dep.split(" ")[0]
-            version = None
-            if version_search:
-                version = version_search[0][1]
-
-            deps.append((package, version))
+                deps.append(Dependency(package, version, None))
 
     return deps
 
 
 def get_package_info(package, version=None, packages=None):
-    print("  {}{}".format(package, "=={}".format(version) if version else ""))
-
     if not packages:
         packages = [[]]
     elif package in [package.name for package in packages[0]]:
         return packages[0]
+
+    print("  {}{}".format(package, "=={}".format(version) if version else ""))
 
     try:
         if version:
@@ -160,7 +167,7 @@ def get_package_info(package, version=None, packages=None):
         else:
             url = "https://pypi.org/pypi/{}/json".format(package)
 
-        response = urllib.request.urlopen(url).read().decode(encoding='UTF-8')
+        response = urllib.request.urlopen(url).read().decode(encoding="UTF-8")
         info = json.loads(response)
 
         name = package
@@ -176,7 +183,7 @@ def get_package_info(package, version=None, packages=None):
         )
 
         src_uri = version_info["url"]
-        src_md5sum, src_sha256sum, src_dir, license_file, license_md5sum = get_package_file_info(
+        src_md5, src_sha256, src_dir, license_file, license_md5 = get_package_file_info(
             package, version, src_uri
         )
 
@@ -191,18 +198,20 @@ def get_package_info(package, version=None, packages=None):
             author_email,
             license,
             license_file,
-            license_md5sum,
+            license_md5,
             src_dir,
             src_uri,
-            src_md5sum,
-            src_sha256sum,
+            src_md5,
+            src_sha256,
             dependencies,
         )
 
         packages[0].append(package)
 
         for dependency in dependencies:
-            get_package_info(dependency[0], version=dependency[1], packages=packages)
+            get_package_info(
+                dependency.name, version=dependency.version, packages=packages
+            )
 
     except Exception as e:
         print("  Failed to gather {} ({})".format(package, str(e)))
@@ -220,18 +229,21 @@ def generate_recipe(package, outdir, python):
 
     output = PYPI_TEMPLATE.format(
         summary=package.summary,
-        md5sum=package.src_md5sum,
-        sha256sum=package.src_sha256sum,
+        md5=package.src_md5,
+        sha256=package.src_sha256,
         src_uri=package.src_uri,
         src_dir=package.src_dir,
         license=package.license,
         license_file=package.license_file,
-        license_md5sum=package.license_md5sum,
+        license_md5=package.license_md5,
         homepage=package.homepage,
         author=package.author,
         author_email=package.author_email,
         dependencies=" ".join(
-            ["{}-{}".format(python, dep[0]) for dep in package.dependencies]
+            [
+                "{}-{}".format(python, package_to_bb_name(dep.name))
+                for dep in package.dependencies
+            ]
         ),
         setuptools="3" if python == "python3" else "",
     )
@@ -274,6 +286,32 @@ def write_preferred_versions(packages, outfile, python):
         outfile.write("\n".join(versions))
 
 
+def generate_recipes(packages, outdir, python):
+    for package in packages:
+        generate_recipe(package, outdir, python)
+
+        extras = [dep for dep in package.dependencies if dep.extra]
+        processed = []
+        for extra in extras:
+            if extra.extra in processed:
+                continue
+
+            processed.append(extra.extra)
+            extra_package = package
+            extra_package = extra_package._replace(
+                name=package.name + "-{}".format(extra.extra)
+            )
+            extra_package = extra_package._replace(
+                dependencies=[Dependency(package.name, package.version, None)]
+                + [
+                    Dependency(e.name, e.version, None)
+                    for e in extras
+                    if e.extra == extra.extra
+                ]
+            )
+            generate_recipe(extra_package, outdir, python)
+
+
 def main():
     try:
         parser = argparse.ArgumentParser()
@@ -304,8 +342,7 @@ def main():
             raise Exception("No packages provided!")
 
         print("Generating recipes:")
-        for package in packages:
-            generate_recipe(package, args.outdir, args.python)
+        generate_recipes(packages, args.outdir, args.python)
 
         version_file = os.path.join(args.outdir, "{}-versions.inc".format(args.python))
         write_preferred_versions(packages, version_file, args.python)

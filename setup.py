@@ -12,7 +12,7 @@ with open(path.join(here, "README.md"), encoding="utf-8") as f:
 
 setup(
     name="genpybb",
-    version="2019.2",
+    version="2019.3",
     description="Generate python bitbake recipes from pypi metadata.",
     long_description=long_description,
     long_description_content_type="text/markdown",
