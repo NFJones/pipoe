@@ -262,9 +262,12 @@ def get_package_info(
         author_email = info["info"]["author_email"]
         license = translate_license(info["info"]["license"], default_license)
 
-        version_info = next(
-            i for i in info["releases"][version] if i["packagetype"] == "sdist"
-        )
+        try:
+            version_info = next(
+                i for i in info["releases"][version] if i["packagetype"] == "sdist"
+            )
+        except:
+            raise Exception("No sdist package can be found.")
 
         src_uri = version_info["url"]
         src_md5, src_sha256, src_dir, license_file, license_md5 = get_package_file_info(
