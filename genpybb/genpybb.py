@@ -143,7 +143,7 @@ def get_package_file_info(package, version, uri):
             f
             for f in src_files
             if ("license" in f.lower() or "copying" in f.lower())
-            and not os.path.isdir(os.path.join(tmpdir, f))
+            and not os.path.isdir(os.path.join(tmpdir, src_dir, f))
         )
     except:
         license_file = "setup.py"

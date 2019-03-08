@@ -15,7 +15,7 @@ with open("requirements.txt", "r") as infile:
 
 setup(
     name="genpybb",
-    version="2019.7",
+    version="2019.8",
     description="Generate python bitbake recipes from pypi metadata.",
     long_description=long_description,
     long_description_content_type="text/markdown",
