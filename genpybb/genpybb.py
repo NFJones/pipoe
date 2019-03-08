@@ -37,6 +37,17 @@ RDEPENDS_${{PN}} = "{dependencies}"
 inherit setuptools{setuptools}
 """
 
+BB_EXTRA_TEMPLATE = """
+SUMMARY = "{summary}"
+HOMEPAGE = "{homepage}"
+AUTHOR = "{author} <{author_email}>"
+
+RDEPENDS_${{PN}} = "{dependencies}"
+
+inherit packagegroup
+"""
+
+
 Package = namedtuple(
     "Package",
     [
@@ -296,26 +307,40 @@ def generate_recipe(package, outdir, python, is_extra=False):
 
     print("  {}".format(basename))
 
-    output = BB_TEMPLATE.format(
-        summary=package.summary,
-        md5=package.src_md5,
-        sha256=package.src_sha256,
-        src_uri=package.src_uri,
-        src_dir=package.src_dir,
-        license=package.license,
-        license_file=package.license_file,
-        license_md5=package.license_md5,
-        homepage=package.homepage,
-        author=package.author,
-        author_email=package.author_email,
-        dependencies=" ".join(
-            [
-                "{}-{}".format(python, package_to_bb_name(dep.name))
-                for dep in package.dependencies
-            ]
-        ),
-        setuptools="3" if python == "python3" else "",
-    )
+    if is_extra:
+        output = BB_EXTRA_TEMPLATE.format(
+            summary=package.summary,
+            homepage=package.homepage,
+            author=package.author,
+            author_email=package.author_email,
+            dependencies=" ".join(
+                [
+                    "{}-{}".format(python, package_to_bb_name(dep.name))
+                    for dep in package.dependencies
+                ]
+            ),
+        )
+    else:
+        output = BB_TEMPLATE.format(
+            summary=package.summary,
+            md5=package.src_md5,
+            sha256=package.src_sha256,
+            src_uri=package.src_uri,
+            src_dir=package.src_dir,
+            license=package.license,
+            license_file=package.license_file,
+            license_md5=package.license_md5,
+            homepage=package.homepage,
+            author=package.author,
+            author_email=package.author_email,
+            dependencies=" ".join(
+                [
+                    "{}-{}".format(python, package_to_bb_name(dep.name))
+                    for dep in package.dependencies
+                ]
+            ),
+            setuptools="3" if python == "python3" else "",
+        )
 
     with open(bbfile, "w") as outfile:
         outfile.write(output)
