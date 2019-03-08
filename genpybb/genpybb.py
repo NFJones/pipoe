@@ -91,10 +91,13 @@ def package_to_bb_name(package):
     return package.lower().replace("_", "-").replace(".", "-")
 
 
-def translate_license(license):
+def translate_license(license, default_license):
     try:
         return licenses.LICENSES[license]
     except:
+        if default_license:
+            return default_license
+
         print("Failed to translate license: {}".format(license))
         mapping = input("Please enter a valid license name: ")
         licenses.LICENSES[license] = mapping
@@ -136,9 +139,12 @@ def get_package_file_info(package, version, uri):
     src_files = os.listdir("{}/{}".format(tmpdir, src_dir))
 
     try:
-        license_file = [
-            f for f in src_files if "license" in f.lower() or "copying" in f.lower()
-        ][0]
+        license_file = next(
+            f
+            for f in src_files
+            if ("license" in f.lower() or "copying" in f.lower())
+            and not os.path.isdir(os.path.join(tmpdir, f))
+        )
     except:
         license_file = "setup.py"
 
@@ -208,7 +214,13 @@ PROCESSED_PACKAGES = []
 
 
 def get_package_info(
-    package, version=None, packages=None, indent=0, extra=None, follow_extras=False
+    package,
+    version=None,
+    packages=None,
+    indent=0,
+    extra=None,
+    follow_extras=False,
+    default_license=None,
 ):
     global PROCESSED_PACKAGES
 
@@ -248,7 +260,7 @@ def get_package_info(
         homepage = info["info"]["home_page"]
         author = info["info"]["author"]
         author_email = info["info"]["author_email"]
-        license = translate_license(info["info"]["license"])
+        license = translate_license(info["info"]["license"], default_license)
 
         version_info = next(
             i for i in info["releases"][version] if i["packagetype"] == "sdist"
@@ -289,6 +301,7 @@ def get_package_info(
                 indent=indent + 2,
                 extra=dependency.extra,
                 follow_extras=follow_extras,
+                default_license=default_license,
             )
 
     except Exception as e:
@@ -346,7 +359,7 @@ def generate_recipe(package, outdir, python, is_extra=False):
         outfile.write(output)
 
 
-def parse_requirements(requirements_file, follow_extras=False):
+def parse_requirements(requirements_file, follow_extras=False, default_license=None):
     packages = []
 
     with open(requirements_file, "r") as infile:
@@ -357,11 +370,17 @@ def parse_requirements(requirements_file, follow_extras=False):
                     parts = [part.strip() for part in package.split("==")]
                     if len(parts) == 2:
                         packages += get_package_info(
-                            parts[0], parts[1], follow_extras=follow_extras
+                            parts[0],
+                            parts[1],
+                            follow_extras=follow_extras,
+                            default_license=default_license,
                         )
                     elif len(parts) == 1:
                         packages += get_package_info(
-                            parts[0], None, follow_extras=follow_extras
+                            parts[0],
+                            None,
+                            follow_extras=follow_extras,
+                            default_license=default_license,
                         )
                     else:
                         print("    Unparsed package: {}".format(package))
@@ -432,15 +451,34 @@ def main():
             default="python",
             choices=["python", "python3"],
         )
+        parser.add_argument(
+            "--licenses",
+            "-l",
+            action="store_true",
+            help="Output an updated license map upon completion.",
+        )
+        parser.add_argument(
+            "--default-license",
+            "-d",
+            help="The default license to use when the package license cannot be mapped.",
+            default=None,
+        )
         args = parser.parse_args()
 
         print("Gathering info:")
         packages = []
         if args.requirements:
-            packages = parse_requirements(args.requirements, follow_extras=args.extras)
+            packages = parse_requirements(
+                args.requirements,
+                follow_extras=args.extras,
+                default_license=args.default_license,
+            )
         elif args.package:
             packages = get_package_info(
-                args.package, args.version, follow_extras=args.extras
+                args.package,
+                args.version,
+                follow_extras=args.extras,
+                default_license=args.default_license,
             )
         else:
             raise Exception("No packages provided!")
@@ -451,11 +489,14 @@ def main():
         version_file = os.path.join(args.outdir, "{}-versions.inc".format(args.python))
         write_preferred_versions(packages, version_file, args.python)
 
-        license_file = os.path.join(args.outdir, "licenses.py")
-        with open(license_file, "w") as outfile:
-            outfile.write("LICENSES = " + pformat(licenses.LICENSES))
+        print()
+        if args.licenses:
+            license_file = os.path.join(args.outdir, "licenses.py")
+            with open(license_file, "w") as outfile:
+                outfile.write("LICENSES = " + pformat(licenses.LICENSES))
 
-        print("\nLicense mappings are available in: {}".format(license_file))
+            print("License mappings are available in: {}".format(license_file))
+
         print("PREFERRED_VERSIONS are available in: {}".format(version_file))
 
     except Exception as e:
