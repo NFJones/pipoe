@@ -9,6 +9,9 @@ here = path.abspath(path.dirname(__file__))
 with open(path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
+install_requires = []
+with open("requirements.txt", "r") as infile:
+    install_requires = [r for r in infile.read().split("\n") if r]
 
 setup(
     name="genpybb",
@@ -27,5 +30,6 @@ setup(
     keywords="yocto bitbake openembedded",
     packages=["genpybb"],
     python_requires="!=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, <4",
+    install_requires=install_requires,
     entry_points={"console_scripts": ["genpybb = genpybb.genpybb:main"]},
 )
