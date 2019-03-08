@@ -5,9 +5,10 @@ The objective of this project is to make creating OpenEmbedded python recipes ju
 # Example
 
 ```
-> usage: genpybb.py [-h] [--package PACKAGE] [--version VERSION]
-                  [--requirements REQUIREMENTS] [--outdir OUTDIR]
-                  [--print-preferred] [--python {python,python3}]
+> genpybb --help
+usage: genpybb [-h] [--package PACKAGE] [--version VERSION]
+               [--requirements REQUIREMENTS] [--extras] [--outdir OUTDIR]
+               [--python {python,python3}]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -17,24 +18,25 @@ optional arguments:
                         The package version.
   --requirements REQUIREMENTS, -r REQUIREMENTS
                         The pypi requirements file.
+  --extras, -e          Generate recipes for extras.
   --outdir OUTDIR, -o OUTDIR
                         The recipe directory.
   --python {python,python3}, -y {python,python3}
                         The python version to use.
-
-> genpybb --package requests --python python3
+> genpybb -p requests
 Gathering info:
   requests
-  chardet
-  idna
-  urllib3
-  certifi==2017.4.17
+  | chardet
+  | idna
+  | urllib3
+  | certifi
 Generating recipes:
-  python3-requests_2.21.0.bb
-  python3-chardet_3.0.4.bb
-  python3-idna_2.8.bb
-  python3-urllib3_1.24.1.bb
-  python3-certifi_2017.4.17.bb
+  python-requests_2.21.0.bb
+  python-chardet_3.0.4.bb
+  python-idna_2.8.bb
+  python-urllib3_1.24.1.bb
+  python-certifi_2018.11.29.bb
 
-PREFERRED_VERSIONS are available in: ./python3-versions.inc
+License mappings are available in: ./licenses.py
+PREFERRED_VERSIONS are available in: ./python-versions.inc
 ```
