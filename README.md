@@ -1,14 +1,26 @@
 # pipoe
 
-The objective of this project is to make creating OpenEmbedded python recipes just a bit easier. `pipoe` will take either a single package name or a requirements file and recursively generate bitbake recipes for every pypi package listed. It is not guaranteed that it will work for every package. Additionally, many recipes will still require additional modification after generation (patches, overrides, appends, etc.).
+The objective of this project is to make creating OpenEmbedded python recipes just a bit easier. `pipoe` will take either a single package name or a requirements file and recursively generate bitbake recipes for every pypi package listed. It is not guaranteed that it will work for every package. Additionally, many recipes will still require additional modification after generation (patches, overrides, appends, etc.). In those cases it is recommended that the user add these modifications in a bbappend file.
 
-# Example
+## Licenses
+
+Licensing within OE is typically pretty strict. `pipoe` contains a license map which will attempt to map a packages license to one that will be accepted by the OE framework. If a license string is found which cannot be mapped, the user will be prompted to enter a valid license name. This name will be saved and the updated map will be saved to `./licenses.py` It is recommended that this file be PR'ed to this repository when generally useful changes are made.
+
+## Extras
+`pipoe` supports generating "extra" recipes based on the extra feature declarations in the packages `requires_dist` field (i.e. urllib3\[secure\]). These recipes are generated as packagegroups which rdepend on the base package.
+
+
+## Versions
+By default `pipoe` will generate a recipe for the newest version of a package. Supplying the `--version` argument will override this behavior. Additionally, `pipoe` will automatically parse versions from requirements files.
+
+## Example
 
 ```
 > pipoe --help
 usage: pipoe [-h] [--package PACKAGE] [--version VERSION]
-               [--requirements REQUIREMENTS] [--extras] [--outdir OUTDIR]
-               [--python {python,python3}]
+             [--requirements REQUIREMENTS] [--extras] [--outdir OUTDIR]
+             [--python {python,python3}] [--licenses]
+             [--default-license DEFAULT_LICENSE]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -23,6 +35,10 @@ optional arguments:
                         The recipe directory.
   --python {python,python3}, -y {python,python3}
                         The python version to use.
+  --licenses, -l        Output an updated license map upon completion.
+  --default-license DEFAULT_LICENSE, -d DEFAULT_LICENSE
+                        The default license to use when the package license
+                        cannot be mapped.
 > pipoe -p requests
 Gathering info:
   requests
