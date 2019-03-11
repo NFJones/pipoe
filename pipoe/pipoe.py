@@ -10,8 +10,6 @@ import shutil
 import json
 import tarfile
 import zipfile
-import platform
-import parsley
 from pep508_parser import parser
 from pipoe import licenses
 from functools import partial
