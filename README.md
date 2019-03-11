@@ -9,7 +9,7 @@ The objective of this project is to make creating OpenEmbedded python recipes ju
 
 ## Licenses
 
-Licensing within OE is typically pretty strict. `pipoe` contains a license map which will attempt to map a packages license to one that will be accepted by the OE framework. If a license string is found which cannot be mapped, the user will be prompted to enter a valid license name. This name will be saved and the updated map will be saved to `./licenses.py` It is recommended that this file be PR'ed to this repository when generally useful changes are made.
+Licensing within OE is typically pretty strict. `pipoe` contains a license map which will attempt to map a packages license to one that will be accepted by the OE framework. If a license string is found which cannot be mapped, the user will be prompted to enter a valid license name. This mapping will be saved and the updated map will be saved to `./licenses.py` if the `--licenses` flag is provided. It is recommended that this file be PR'ed to this repository when generally useful changes are made.
 
 ## Extras
 `pipoe` supports generating "extra" recipes based on the extra feature declarations in the packages `requires_dist` field (i.e. urllib3\[secure\]). These recipes are generated as packagegroups which rdepend on the base package.
