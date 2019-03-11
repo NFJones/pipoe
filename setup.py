@@ -14,12 +14,12 @@ with open("requirements.txt", "r") as infile:
     install_requires = [r for r in infile.read().split("\n") if r]
 
 setup(
-    name="genpybb",
+    name="pipoe",
     version="2019.8",
     description="Generate python bitbake recipes from pypi metadata.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/NFJones/genpybb",
+    url="https://github.com/NFJones/pipoe",
     author="Neil F Jones",
     classifiers=[
         "Intended Audience :: Developers",
@@ -28,8 +28,8 @@ setup(
         "Programming Language :: Python :: 3",
     ],
     keywords="yocto bitbake openembedded",
-    packages=["genpybb"],
+    packages=["pipoe"],
     python_requires="!=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, <4",
     install_requires=install_requires,
-    entry_points={"console_scripts": ["genpybb = genpybb.genpybb:main"]},
+    entry_points={"console_scripts": ["pipoe = pipoe.pipoe:main"]},
 )

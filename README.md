@@ -1,12 +1,12 @@
-# genpybb
+# pipoe
 
-The objective of this project is to make creating OpenEmbedded python recipes just a bit easier. `genpybb` will take either a single package name or a requirements file and recursively generate bitbake recipes for every pypi package listed. It is not guaranteed that it will work for every package. Additionally, many recipes will still require additional modification after generation (patches, overrides, appends, etc.).
+The objective of this project is to make creating OpenEmbedded python recipes just a bit easier. `pipoe` will take either a single package name or a requirements file and recursively generate bitbake recipes for every pypi package listed. It is not guaranteed that it will work for every package. Additionally, many recipes will still require additional modification after generation (patches, overrides, appends, etc.).
 
 # Example
 
 ```
-> genpybb --help
-usage: genpybb [-h] [--package PACKAGE] [--version VERSION]
+> pipoe --help
+usage: pipoe [-h] [--package PACKAGE] [--version VERSION]
                [--requirements REQUIREMENTS] [--extras] [--outdir OUTDIR]
                [--python {python,python3}]
 
@@ -23,7 +23,7 @@ optional arguments:
                         The recipe directory.
   --python {python,python3}, -y {python,python3}
                         The python version to use.
-> genpybb -p requests
+> pipoe -p requests
 Gathering info:
   requests
   | chardet

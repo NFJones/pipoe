@@ -13,7 +13,7 @@ import zipfile
 import platform
 import parsley
 from pep508_parser import parser
-from genpybb import licenses
+from pipoe import licenses
 from functools import partial
 from collections import namedtuple
 from pprint import pformat
