@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import os.path
 import re
 import sys
 import urllib.request
@@ -9,6 +10,7 @@ import hashlib
 import shutil
 import json
 import tarfile
+import tempfile
 import zipfile
 from pep508_parser import parser
 from pipoe import licenses
@@ -16,6 +18,7 @@ from functools import partial
 from collections import namedtuple
 from pprint import pformat
 
+import pkginfo
 
 BB_TEMPLATE = """
 SUMMARY = "{summary}"
@@ -193,10 +196,36 @@ def parse_requires_dist(requires_dist):
     return ret
 
 
-def get_package_dependencies(info, follow_extras=False):
-    deps = []
+def fetch_requirements_from_remote_package(info, version):
+    """ Looks up requires_dist from an actual package """
 
-    requires_dist = info["info"]["requires_dist"]
+    # Version must exists, otherwise previous steps failed
+    pkg_versions = info["releases"][version]
+
+    # If we must fetch a package, lets fetch the smallest one
+    pkg_url = sorted(pkg_versions, key=lambda pkg: pkg["size"], reverse=True)[0]["url"]
+    filename = pkg_url.split("/")[-1]
+
+    # Select the appropriate parser from pkginfo based on the filename
+    parse = None
+    if filename.endswith(".tar.gz"):
+        parse = pkginfo.SDist
+    elif filename.endswith(".whl"):
+        parse = pkginfo.Wheel
+    elif filename.endswith(".egg"):
+        parse =pkginfo.BDist
+    else:
+        raise RuntimeError("Unsupported fileformat for package introspection: {}".format(filename))
+
+    # Download the package and read the MANIFEST
+    with tempfile.TemporaryDirectory() as directory:
+        path = os.path.join(directory, filename)
+        urllib.request.urlretrieve(pkg_url, path)
+        return parse(path).requires_dist
+
+
+def get_package_dependencies(requires_dist, follow_extras=False):
+    deps = []
 
     if requires_dist:
         for dep in requires_dist:
@@ -272,7 +301,13 @@ def get_package_info(
             package, version, src_uri
         )
 
-        dependencies = get_package_dependencies(info, follow_extras=follow_extras)
+        requires_dist = info["info"]["requires_dist"]
+
+        # Only parse if requires_dist is missing, e.g. sentry-sdk
+        if requires_dist is None:
+            requires_dist = fetch_requirements_from_remote_package(info, version)
+
+        dependencies = get_package_dependencies(requires_dist, follow_extras=follow_extras)
 
         package = Package(
             name,
