@@ -89,6 +89,7 @@ LICENSES = {
     "Entessa": "Entessa",
     "ErlPL-1.1": "ErlPL-1.1",
     "Expat license": "MIT",
+    "Expat (MIT/X11)": "MIT",
     "Fair": "Fair",
     "Frameworx-1.0": "Frameworx-1.0",
     "FreeType": "FreeType",
