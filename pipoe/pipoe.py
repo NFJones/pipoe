@@ -22,20 +22,16 @@ import pkginfo
 
 BB_TEMPLATE = """
 SUMMARY = "{summary}"
-HOMEPAGE = "{homepage}"
 AUTHOR = "{author} <{author_email}>"
 LICENSE = "{license}"
 LIC_FILES_CHKSUM = "file://{license_file};md5={license_md5}"
 
-SRC_URI = "{src_uri}"
 SRC_URI[md5sum] = "{md5}"
 SRC_URI[sha256sum] = "{sha256}"
 
-S = "${{WORKDIR}}/{src_dir}"
-
 RDEPENDS_${{PN}} = "{dependencies}"
 
-inherit setuptools{setuptools}
+inherit pypi setuptools{setuptools}
 """
 
 BB_EXTRA_TEMPLATE = """
@@ -374,12 +370,9 @@ def generate_recipe(package, outdir, python, is_extra=False):
             summary=package.summary,
             md5=package.src_md5,
             sha256=package.src_sha256,
-            src_uri=package.src_uri,
-            src_dir=package.src_dir,
             license=package.license,
             license_file=package.license_file,
             license_md5=package.license_md5,
-            homepage=package.homepage,
             author=package.author,
             author_email=package.author_email,
             dependencies=" ".join(
