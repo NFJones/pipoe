@@ -44,6 +44,7 @@ optional arguments:
   --default-license DEFAULT_LICENSE, -d DEFAULT_LICENSE
                         The default license to use when the package license
                         cannot be mapped.
+  --pypi, -s            Use oe pypi class for recipe
 > pipoe -p requests
 Gathering info:
   requests

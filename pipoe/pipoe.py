@@ -38,6 +38,24 @@ RDEPENDS_${{PN}} = "{dependencies}"
 inherit setuptools{setuptools}
 """
 
+BB_TEMPLATE_PYPI = """
+SUMMARY = "{summary}"
+HOMEPAGE = "{homepage}"
+AUTHOR = "{author} <{author_email}>"
+LICENSE = "{license}"
+LIC_FILES_CHKSUM = "file://{license_file};md5={license_md5}"
+
+SRC_URI[md5sum] = "{md5}"
+SRC_URI[sha256sum] = "{sha256}"
+
+PYPI_PACKAGE = "{pypi_package}"
+
+RDEPENDS_${{PN}} = "{dependencies}"
+
+inherit setuptools{setuptools} pypi
+"""
+
+
 BB_EXTRA_TEMPLATE = """
 SUMMARY = "{summary}"
 HOMEPAGE = "{homepage}"
@@ -348,7 +366,7 @@ def get_package_info(
     return packages[0]
 
 
-def generate_recipe(package, outdir, python, is_extra=False):
+def generate_recipe(package, outdir, python, is_extra=False, use_pypi=False):
     basename = "{}-{}_{}.bb".format(
         python, package_to_bb_name(package.name), package.version
     )
@@ -370,12 +388,14 @@ def generate_recipe(package, outdir, python, is_extra=False):
             ),
         )
     else:
-        output = BB_TEMPLATE.format(
+        selected_template = BB_TEMPLATE_PYPI if use_pypi else BB_TEMPLATE
+        output = selected_template.format(
             summary=package.summary,
             md5=package.src_md5,
             sha256=package.src_sha256,
             src_uri=package.src_uri,
             src_dir=package.src_dir,
+            pypi_package=package.name,
             license=package.license,
             license_file=package.license_file,
             license_md5=package.license_md5,
@@ -439,9 +459,9 @@ def write_preferred_versions(packages, outfile, python):
         outfile.write("\n".join(versions))
 
 
-def generate_recipes(packages, outdir, python, follow_extras=False):
+def generate_recipes(packages, outdir, python, follow_extras=False, pypi=False):
     for package in packages:
-        generate_recipe(package, outdir, python)
+        generate_recipe(package, outdir, python, use_pypi=pypi)
 
         if follow_extras:
             extras = [dep for dep in package.dependencies if dep.extra]
@@ -463,7 +483,7 @@ def generate_recipes(packages, outdir, python, follow_extras=False):
                         if e.extra == extra.extra
                     ]
                 )
-                generate_recipe(extra_package, outdir, python, is_extra=True)
+                generate_recipe(extra_package, outdir, python, is_extra=True, use_pypi=pypi)
 
 
 def main():
@@ -499,6 +519,12 @@ def main():
             help="The default license to use when the package license cannot be mapped.",
             default=None,
         )
+        parser.add_argument(
+            "--pypi",
+            "-s",
+            action="store_true",
+            help="Use oe pypi class for recipe"
+        )
         args = parser.parse_args()
 
         print("Gathering info:")
@@ -520,7 +546,7 @@ def main():
             raise Exception("No packages provided!")
 
         print("Generating recipes:")
-        generate_recipes(packages, args.outdir, args.python, args.extras)
+        generate_recipes(packages, args.outdir, args.python, args.extras, args.pypi)
 
         version_file = os.path.join(args.outdir, "{}-versions.inc".format(args.python))
         write_preferred_versions(packages, version_file, args.python)
