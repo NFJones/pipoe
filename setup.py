@@ -15,7 +15,7 @@ with open("requirements.txt", "r") as infile:
 
 setup(
     name="pipoe",
-    version="2019.11",
+    version="2020.10",
     description="Generate python bitbake recipes from pypi metadata.",
     long_description=long_description,
     long_description_content_type="text/markdown",
