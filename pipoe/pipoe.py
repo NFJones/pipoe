@@ -366,7 +366,7 @@ def get_package_info(
     return packages[0]
 
 
-def generate_recipe(package, outdir, python, is_extra=False, use_pypi=False):
+def generate_recipe(package, outdir, python, is_extra=False, use_pypi=False, add_native=False):
     basename = "{}-{}_{}.bb".format(
         python, package_to_bb_name(package.name), package.version
     )
@@ -410,7 +410,15 @@ def generate_recipe(package, outdir, python, is_extra=False, use_pypi=False):
             ),
             setuptools="3" if python == "python3" else "",
         )
-
+    if add_native:
+        output += '\nBBCLASSEXTEND += \"native\"\n'
+        output += 'DEPENDS_class-native += " {}"\n'.format(
+            " ".join(
+                [
+                    "{}-{}-native".format(python, package_to_bb_name(dep.name))
+                    for dep in package.dependencies
+                ])
+        ) if len(package.dependencies) else ""
     with open(bbfile, "w") as outfile:
         outfile.write(output)
 
@@ -459,9 +467,9 @@ def write_preferred_versions(packages, outfile, python):
         outfile.write("\n".join(versions))
 
 
-def generate_recipes(packages, outdir, python, follow_extras=False, pypi=False):
+def generate_recipes(packages, outdir, python, follow_extras=False, pypi=False, native=False):
     for package in packages:
-        generate_recipe(package, outdir, python, use_pypi=pypi)
+        generate_recipe(package, outdir, python, use_pypi=pypi, add_native=native)
 
         if follow_extras:
             extras = [dep for dep in package.dependencies if dep.extra]
@@ -483,7 +491,7 @@ def generate_recipes(packages, outdir, python, follow_extras=False, pypi=False):
                         if e.extra == extra.extra
                     ]
                 )
-                generate_recipe(extra_package, outdir, python, is_extra=True, use_pypi=pypi)
+                generate_recipe(extra_package, outdir, python, is_extra=True, use_pypi=pypi, add_native=native)
 
 
 def main():
@@ -525,6 +533,12 @@ def main():
             action="store_true",
             help="Use oe pypi class for recipe"
         )
+        parser.add_argument(
+            "--native",
+            "-n",
+            action="store_true",
+            help="Make recipe available native"
+        )
         args = parser.parse_args()
 
         print("Gathering info:")
@@ -546,7 +560,7 @@ def main():
             raise Exception("No packages provided!")
 
         print("Generating recipes:")
-        generate_recipes(packages, args.outdir, args.python, args.extras, args.pypi)
+        generate_recipes(packages, args.outdir, args.python, args.extras, args.pypi, args.native)
 
         version_file = os.path.join(args.outdir, "{}-versions.inc".format(args.python))
         write_preferred_versions(packages, version_file, args.python)

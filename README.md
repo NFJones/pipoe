@@ -45,6 +45,7 @@ optional arguments:
                         The default license to use when the package license
                         cannot be mapped.
   --pypi, -s            Use oe pypi class for recipe
+  --native, -n          Make recipe available native
 > pipoe -p requests
 Gathering info:
   requests
