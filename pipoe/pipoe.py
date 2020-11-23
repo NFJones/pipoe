@@ -145,37 +145,38 @@ def get_file_extension(uri):
 
 def get_package_file_info(package, version, uri):
     extension = get_file_extension(uri)
-    output = "/tmp/{}_{}.{}".format(package, version, extension)
+    with tempfile.TemporaryDirectory() as tmp:
+        output = os.path.join(str(tmp), "{}_{}.{}".format(package, version, extension))
 
-    if os.path.exists(output):
+        if os.path.exists(output):
+            os.remove(output)
+
+        urllib.request.urlretrieve(uri, output)
+
+        tmpdir = unpack_package(output)
+        src_dir = os.listdir(tmpdir)[0]
+
+        src_files = os.listdir("{}/{}".format(tmpdir, src_dir))
+
+        try:
+            license_file = next(
+                f
+                for f in src_files
+                if ("license" in f.lower() or "copying" in f.lower())
+                and not os.path.isdir(os.path.join(tmpdir, src_dir, f))
+            )
+        except:
+            license_file = "setup.py"
+
+        license_path = os.path.join(tmpdir, src_dir, license_file)
+        license_md5 = md5sum(license_path)
+        src_md5 = md5sum(output)
+        src_sha256 = sha256sum(output)
+
         os.remove(output)
+        shutil.rmtree(tmpdir)
 
-    urllib.request.urlretrieve(uri, output)
-
-    tmpdir = unpack_package(output)
-    src_dir = os.listdir(tmpdir)[0]
-
-    src_files = os.listdir("{}/{}".format(tmpdir, src_dir))
-
-    try:
-        license_file = next(
-            f
-            for f in src_files
-            if ("license" in f.lower() or "copying" in f.lower())
-            and not os.path.isdir(os.path.join(tmpdir, src_dir, f))
-        )
-    except:
-        license_file = "setup.py"
-
-    license_path = os.path.join(tmpdir, src_dir, license_file)
-    license_md5 = md5sum(license_path)
-    src_md5 = md5sum(output)
-    src_sha256 = sha256sum(output)
-
-    os.remove(output)
-    shutil.rmtree(tmpdir)
-
-    return (src_md5, src_sha256, src_dir, license_file, license_md5)
+        return (src_md5, src_sha256, src_dir, license_file, license_md5)
 
 
 def decide_version(spec):
