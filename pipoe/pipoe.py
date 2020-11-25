@@ -296,6 +296,27 @@ def get_package_info(
 
     try:
         if version:
+            if re.search('\*', version):
+                url = "https://pypi.org/pypi/{}/json".format(package_name)
+                response = urllib.request.urlopen(url).read().decode(encoding="UTF-8")
+                info = json.loads(response)
+                pv = []
+                v = version.split('.')
+                print("fuzzy version {} ".format(v))
+                for i in info["releases"]:
+                    tv = i.split('.')
+                    found=True
+                    for j in enumerate(v):
+                        if j[1] == '*':
+                            break;
+                        if j[1] != tv[j[0]]:
+                            found=False
+                            break
+                    if found:
+                        pv.append(i)
+                version = pv[-1]
+
+
             url = "https://pypi.org/pypi/{}/{}/json".format(package_name, version)
         else:
             url = "https://pypi.org/pypi/{}/json".format(package_name)
