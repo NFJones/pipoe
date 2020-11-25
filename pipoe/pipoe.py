@@ -34,7 +34,7 @@ SRC_URI[sha256sum] = "{sha256}"
 
 S = "${{WORKDIR}}/{src_dir}"
 
-DEPENDS = "{build_dependencies}"
+DEPENDS += " {build_dependencies}"
 RDEPENDS_${{PN}} = "{dependencies}"
 
 inherit setuptools{setuptools}
@@ -52,7 +52,7 @@ SRC_URI[sha256sum] = "{sha256}"
 
 PYPI_PACKAGE = "{pypi_package}"
 
-DEPENDS = "{build_dependencies}"
+DEPENDS += " {build_dependencies}"
 RDEPENDS_${{PN}} = "{dependencies}"
 
 inherit setuptools{setuptools} pypi
