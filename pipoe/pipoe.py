@@ -27,6 +27,8 @@ AUTHOR = "{author} <{author_email}>"
 LICENSE = "{license}"
 LIC_FILES_CHKSUM = "file://{license_file};md5={license_md5}"
 
+inherit setuptools{setuptools}
+
 SRC_URI = "{src_uri}"
 SRC_URI[md5sum] = "{md5}"
 SRC_URI[sha256sum] = "{sha256}"
@@ -35,7 +37,7 @@ S = "${{WORKDIR}}/{src_dir}"
 
 RDEPENDS_${{PN}} = "{dependencies}"
 
-inherit setuptools{setuptools}
+BBCLASSEXTEND = "native nativesdk"
 """
 
 BB_TEMPLATE_PYPI = """
@@ -45,6 +47,8 @@ AUTHOR = "{author} <{author_email}>"
 LICENSE = "{license}"
 LIC_FILES_CHKSUM = "file://{license_file};md5={license_md5}"
 
+inherit setuptools{setuptools} pypi
+
 SRC_URI[md5sum] = "{md5}"
 SRC_URI[sha256sum] = "{sha256}"
 
@@ -52,7 +56,7 @@ PYPI_PACKAGE = "{pypi_package}"
 
 RDEPENDS_${{PN}} = "{dependencies}"
 
-inherit setuptools{setuptools} pypi
+BBCLASSEXTEND = "native nativesdk"
 """
 
 
@@ -64,6 +68,8 @@ AUTHOR = "{author} <{author_email}>"
 RDEPENDS_${{PN}} = "{dependencies}"
 
 inherit packagegroup
+
+BBCLASSEXTEND = "native nativesdk"
 """
 
 
