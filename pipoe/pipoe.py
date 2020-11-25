@@ -52,7 +52,7 @@ inherit setuptools{setuptools} pypi
 SRC_URI[md5sum] = "{md5}"
 SRC_URI[sha256sum] = "{sha256}"
 
-PYPI_PACKAGE = "{pypi_package}"
+PYPI_PACKAGE = "{pypi_package}"{pypi_package_ext}
 
 RDEPENDS_${{PN}} = "{dependencies}"
 
@@ -413,6 +413,7 @@ def generate_recipe(package, outdir, python, is_extra=False, use_pypi=False):
             src_uri=package.src_uri,
             src_dir=package.src_dir,
             pypi_package=package.name,
+            pypi_package_ext="\nPYPI_PACKAGE_EXT = \"" + get_file_extension(package.src_uri) + "\"" if not package.src_uri.endswith(".tar.gz") else "",
             license=package.license,
             license_file=package.license_file,
             license_md5=package.license_md5,
