@@ -286,9 +286,12 @@ def get_package_info(
 ):
     global PROCESSED_PACKAGES
 
+    package_name = package.split('[')[0]
+#    extra_needed = package.split('[')[1].replace("]", "")
+
     if not packages:
         packages = [[]]
-    elif package in [package.name for package in PROCESSED_PACKAGES] or package in [
+    elif package_name in [package.name for package in PROCESSED_PACKAGES] or package_name in [
         package.name for package in packages[0]
     ]:
         return packages[0]
@@ -309,14 +312,14 @@ def get_package_info(
 
     try:
         if version:
-            url = "https://pypi.org/pypi/{}/{}/json".format(package, version)
+            url = "https://pypi.org/pypi/{}/{}/json".format(package_name, version)
         else:
-            url = "https://pypi.org/pypi/{}/json".format(package)
+            url = "https://pypi.org/pypi/{}/json".format(package_name)
 
         response = urllib.request.urlopen(url).read().decode(encoding="UTF-8")
         info = json.loads(response)
 
-        name = package
+        name = package_name
         version = info["info"]["version"]
         summary = info["info"]["summary"].replace('\n', ' \\\n')
         homepage = info["info"]["home_page"]
