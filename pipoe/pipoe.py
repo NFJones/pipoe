@@ -220,6 +220,16 @@ def parse_requires_dist(requires_dist):
     ret = Dependency(spec[0], decide_version(spec), decide_extra(spec))
     return ret
 
+def pkg_size(pkg):
+    # whl is omitted as we prefer source package
+    extensions = ["tar", "tar.gz", "tar.bz2", "tar.xz"]
+    for extension in extensions:
+        if pkg["url"].endswith(extension):
+            return pkg["size"]
+    if pkg["url"].endswith("zip"):
+        return pkg["size"] * 10
+    return pkg["size"] * 10000
+
 
 def fetch_requirements_from_remote_package(info, version):
     """ Looks up requires_dist from an actual package """
@@ -228,7 +238,7 @@ def fetch_requirements_from_remote_package(info, version):
     pkg_versions = info["releases"][version]
 
     # If we must fetch a package, lets fetch the smallest one
-    pkg_url = sorted(pkg_versions, key=lambda pkg: pkg["size"], reverse=True)[0]["url"]
+    pkg_url = sorted(pkg_versions, key=pkg_size, reverse=False)[0]["url"]
     filename = pkg_url.split("/")[-1]
 
     # Select the appropriate parser from pkginfo based on the filename
