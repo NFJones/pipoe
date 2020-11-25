@@ -266,7 +266,7 @@ def fetch_requirements_from_remote_package(info, version):
 
     # Select the appropriate parser from pkginfo based on the filename
     parse = None
-    if filename.endswith(".tar.gz"):
+    if filename.endswith(".tar.gz") or filename.endswith(".zip") or filename.endswith(".tar.xz") or filename.endswith(".tar.bz2") or filename.endswith(".tar"):
         parse = pkginfo.SDist
     elif filename.endswith(".whl"):
         parse = pkginfo.Wheel
