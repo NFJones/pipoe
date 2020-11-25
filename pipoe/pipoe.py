@@ -318,7 +318,7 @@ def get_package_info(
 
         name = package
         version = info["info"]["version"]
-        summary = info["info"]["summary"]
+        summary = info["info"]["summary"].replace('\n', ' \\\n')
         homepage = info["info"]["home_page"]
         author = info["info"]["author"]
         author_email = info["info"]["author_email"]
