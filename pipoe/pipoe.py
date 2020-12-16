@@ -28,6 +28,8 @@ AUTHOR = "{author} <{author_email}>"
 LICENSE = "{license}"
 LIC_FILES_CHKSUM = "file://{license_file};md5={license_md5}"
 
+inherit setuptools{setuptools}
+
 SRC_URI = "{src_uri}"
 SRC_URI[md5sum] = "{md5}"
 SRC_URI[sha256sum] = "{sha256}"
@@ -37,7 +39,7 @@ S = "${{WORKDIR}}/{src_dir}"
 DEPENDS += " {build_dependencies}"
 RDEPENDS_${{PN}} = "{dependencies}"
 
-inherit setuptools{setuptools}
+BBCLASSEXTEND = "native nativesdk"
 """
 
 BB_TEMPLATE_PYPI = """
@@ -47,15 +49,17 @@ AUTHOR = "{author} <{author_email}>"
 LICENSE = "{license}"
 LIC_FILES_CHKSUM = "file://{license_file};md5={license_md5}"
 
+inherit setuptools{setuptools} pypi
+
 SRC_URI[md5sum] = "{md5}"
 SRC_URI[sha256sum] = "{sha256}"
 
-PYPI_PACKAGE = "{pypi_package}"
+PYPI_PACKAGE = "{pypi_package}"{pypi_package_ext}
 
 DEPENDS += " {build_dependencies}"
 RDEPENDS_${{PN}} = "{dependencies}"
 
-inherit setuptools{setuptools} pypi
+BBCLASSEXTEND = "native nativesdk"
 """
 
 
@@ -67,6 +71,8 @@ AUTHOR = "{author} <{author_email}>"
 RDEPENDS_${{PN}} = "{dependencies}"
 
 inherit packagegroup
+
+BBCLASSEXTEND = "native nativesdk"
 """
 
 
@@ -253,6 +259,16 @@ def parse_requires_dist(requires_dist):
     ret = Dependency(spec[0], decide_version(spec), decide_extra(spec))
     return ret
 
+def pkg_size(pkg):
+    # whl is omitted as we prefer source package
+    extensions = ["tar", "tar.gz", "tar.bz2", "tar.xz"]
+    for extension in extensions:
+        if pkg["url"].endswith(extension):
+            return pkg["size"]
+    if pkg["url"].endswith("zip"):
+        return pkg["size"] * 10
+    return pkg["size"] * 10000
+
 
 def fetch_requirements_from_remote_package(info, version):
     """ Looks up requires_dist from an actual package """
@@ -261,7 +277,7 @@ def fetch_requirements_from_remote_package(info, version):
     pkg_versions = info["releases"][version]
 
     # If we must fetch a package, lets fetch the smallest one
-    pkg_url = sorted(pkg_versions, key=lambda pkg: pkg["size"], reverse=True)[0]["url"]
+    pkg_url = sorted(pkg_versions, key=pkg_size, reverse=False)[0]["url"]
     filename = pkg_url.split("/")[-1]
 
     # Select the appropriate parser from pkginfo based on the filename
@@ -365,7 +381,7 @@ def get_package_info(
 
         name = package_name
         version = info["info"]["version"]
-        summary = info["info"]["summary"]
+        summary = info["info"]["summary"].replace('\n', ' \\\n')
         homepage = info["info"]["home_page"]
         author = info["info"]["author"]
         author_email = info["info"]["author_email"]
@@ -461,6 +477,7 @@ def generate_recipe(package, outdir, python, is_extra=False, use_pypi=False):
             src_uri=package.src_uri,
             src_dir=package.src_dir,
             pypi_package=package.name,
+            pypi_package_ext="\nPYPI_PACKAGE_EXT = \"" + get_file_extension(package.src_uri) + "\"" if not package.src_uri.endswith(".tar.gz") else "",
             license=package.license,
             license_file=package.license_file,
             license_md5=package.license_md5,
