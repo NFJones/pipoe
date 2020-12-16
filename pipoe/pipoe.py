@@ -12,6 +12,7 @@ import json
 import tarfile
 import tempfile
 import zipfile
+import mmap
 from pep508_parser import parser
 from pipoe import licenses
 from functools import partial
@@ -33,6 +34,7 @@ SRC_URI[sha256sum] = "{sha256}"
 
 S = "${{WORKDIR}}/{src_dir}"
 
+DEPENDS += " {build_dependencies}"
 RDEPENDS_${{PN}} = "{dependencies}"
 
 inherit setuptools{setuptools}
@@ -50,6 +52,7 @@ SRC_URI[sha256sum] = "{sha256}"
 
 PYPI_PACKAGE = "{pypi_package}"
 
+DEPENDS += " {build_dependencies}"
 RDEPENDS_${{PN}} = "{dependencies}"
 
 inherit setuptools{setuptools} pypi
@@ -84,6 +87,7 @@ Package = namedtuple(
         "src_md5",
         "src_sha256",
         "dependencies",
+        "build_dependencies",
     ],
 )
 
@@ -142,10 +146,36 @@ def get_file_extension(uri):
             return extension
     raise Exception("Extension not supported: {}".format(uri))
 
+def package_to_bb_build_depends(package_name):
+    name = package_name.split('<')[0].split('>')[0].split('~')[0].split('=')[0].strip()
+    return "${PYTHON_PN}-" + package_to_bb_name(name) + "-native"
+
+def gather_package_build_depends(name, data):
+    build_deps = []
+
+    if re.match(b"^(\s*)$", name):
+        return build_deps
+
+    # Check if it's a variable
+    match = re.search(name + b" = (.*)", data)
+    if match:
+        # This is a variable check his contents
+        for bd in match.group(1).replace(b'[', b'').replace(b']', b'').split(b","):
+            match = re.match('^\w\S+', bd.decode("utf-8").replace("'","").replace("\"", "").strip())
+            if match:
+                build_deps.append(package_to_bb_build_depends(match.group(0)))
+    else:
+        # This is a regular field
+        build_deps.append(package_to_bb_build_depends(name.decode("utf-8").replace("'","").replace("\"", "")))
+
+
+    return build_deps
+
 
 def get_package_file_info(package, version, uri):
     extension = get_file_extension(uri)
     with tempfile.TemporaryDirectory() as tmp:
+        build_deps = []
         output = os.path.join(str(tmp), "{}_{}.{}".format(package, version, extension))
 
         if os.path.exists(output):
@@ -168,6 +198,15 @@ def get_package_file_info(package, version, uri):
         except:
             license_file = "setup.py"
 
+        # Try to catch build depends into setup.py file
+        with open(os.path.join(tmpdir, src_dir, "setup.py"), 'r+') as f:
+            data = mmap.mmap(f.fileno(), 0)
+            match = re.search(b'^(\s*)setup_requires( *)=( *)([\[|\(]*)(.*)([\]|\)]*)', data, re.MULTILINE)
+            if match:
+                for bd in match.group(5).replace(b'[', b'').replace(b']', b'').replace(b'(', b'').replace(b')', b'').strip().split(b","):
+                     build_deps.extend(gather_package_build_depends(bd, data))
+
+
         license_path = os.path.join(tmpdir, src_dir, license_file)
         license_md5 = md5sum(license_path)
         src_md5 = md5sum(output)
@@ -176,7 +215,7 @@ def get_package_file_info(package, version, uri):
         os.remove(output)
         shutil.rmtree(tmpdir)
 
-        return (src_md5, src_sha256, src_dir, license_file, license_md5)
+        return (src_md5, src_sha256, src_dir, license_file, license_md5, build_deps)
 
 
 def decide_version(spec):
@@ -227,7 +266,7 @@ def fetch_requirements_from_remote_package(info, version):
 
     # Select the appropriate parser from pkginfo based on the filename
     parse = None
-    if filename.endswith(".tar.gz"):
+    if filename.endswith(".tar.gz") or filename.endswith(".zip") or filename.endswith(".tar.xz") or filename.endswith(".tar.bz2") or filename.endswith(".tar"):
         parse = pkginfo.SDist
     elif filename.endswith(".whl"):
         parse = pkginfo.Wheel
@@ -270,9 +309,12 @@ def get_package_info(
 ):
     global PROCESSED_PACKAGES
 
+    package_name = package.split('[')[0]
+#    extra_needed = package.split('[')[1].replace("]", "")
+
     if not packages:
         packages = [[]]
-    elif package in [package.name for package in PROCESSED_PACKAGES] or package in [
+    elif package_name in [package.name for package in PROCESSED_PACKAGES] or package_name in [
         package.name for package in packages[0]
     ]:
         return packages[0]
@@ -293,14 +335,35 @@ def get_package_info(
 
     try:
         if version:
-            url = "https://pypi.org/pypi/{}/{}/json".format(package, version)
+            if re.search('\*', version):
+                url = "https://pypi.org/pypi/{}/json".format(package_name)
+                response = urllib.request.urlopen(url).read().decode(encoding="UTF-8")
+                info = json.loads(response)
+                pv = []
+                v = version.split('.')
+                print("fuzzy version {} ".format(v))
+                for i in info["releases"]:
+                    tv = i.split('.')
+                    found=True
+                    for j in enumerate(v):
+                        if j[1] == '*':
+                            break;
+                        if j[1] != tv[j[0]]:
+                            found=False
+                            break
+                    if found:
+                        pv.append(i)
+                version = pv[-1]
+
+
+            url = "https://pypi.org/pypi/{}/{}/json".format(package_name, version)
         else:
-            url = "https://pypi.org/pypi/{}/json".format(package)
+            url = "https://pypi.org/pypi/{}/json".format(package_name)
 
         response = urllib.request.urlopen(url).read().decode(encoding="UTF-8")
         info = json.loads(response)
 
-        name = package
+        name = package_name
         version = info["info"]["version"]
         summary = info["info"]["summary"]
         homepage = info["info"]["home_page"]
@@ -316,8 +379,8 @@ def get_package_info(
             raise Exception("No sdist package can be found.")
 
         src_uri = version_info["url"]
-        src_md5, src_sha256, src_dir, license_file, license_md5 = get_package_file_info(
-            package, version, src_uri
+        src_md5, src_sha256, src_dir, license_file, license_md5, build_deps = get_package_file_info(
+            package_name, version, src_uri
         )
 
         requires_dist = info["info"]["requires_dist"]
@@ -343,6 +406,7 @@ def get_package_info(
             src_md5,
             src_sha256,
             dependencies,
+            build_deps,
         )
 
         packages[0].append(package)
@@ -403,6 +467,12 @@ def generate_recipe(package, outdir, python, is_extra=False, use_pypi=False):
             homepage=package.homepage,
             author=package.author,
             author_email=package.author_email,
+            build_dependencies=" ".join(
+                [
+                    dep
+                    for dep in package.build_dependencies
+                ]
+            ),
             dependencies=" ".join(
                 [
                     "{}-{}".format(python, package_to_bb_name(dep.name))
