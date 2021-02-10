@@ -122,7 +122,7 @@ def package_to_bb_name(package):
 
 def translate_license(license, default_license):
     try:
-        return licenses.LICENSES[license]
+        return licenses.LICENSES[license.strip("'").strip('"')]
     except:
         if default_license:
             return default_license
