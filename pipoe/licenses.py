@@ -137,6 +137,7 @@ LICENSES = {
     "MIT License": "MIT",
     "MIT license": "MIT",
     "MIT/X11": "MIT",
+    "MPL 2.0": "MPL-2.0",
     "MPL v2": "MPL-2.0",
     "MPL-1.0": "MPL-1.0",
     "MPL-1.1": "MPL-1.1",
