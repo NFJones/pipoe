@@ -274,7 +274,7 @@ def fetch_requirements_from_remote_package(info, version):
     """ Looks up requires_dist from an actual package """
 
     # Version must exists, otherwise previous steps failed
-    pkg_versions = info["releases"][version]
+    pkg_versions = info["urls"]
 
     # If we must fetch a package, lets fetch the smallest one
     pkg_url = sorted(pkg_versions, key=pkg_size, reverse=False)[0]["url"]
@@ -358,7 +358,7 @@ def get_package_info(
                 pv = []
                 v = version.split('.')
                 print("fuzzy version {} ".format(v))
-                for i in info["releases"]:
+                for i in info["urls"]:
                     tv = i.split('.')
                     found=True
                     for j in enumerate(v):
@@ -389,7 +389,7 @@ def get_package_info(
 
         try:
             version_info = next(
-                i for i in info["releases"][version] if i["packagetype"] == "sdist"
+                i for i in info["urls"] if i["packagetype"] == "sdist"
             )
         except:
             raise Exception("No sdist package can be found.")
